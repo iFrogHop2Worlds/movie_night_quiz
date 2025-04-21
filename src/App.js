@@ -86,12 +86,19 @@ function App() {
 
     return prompt;
   };
-
+  console.log('tmdb:', process.env.REACT_APP_TMDB_API_TOKEN);
   const getMovieTrailer = async (movieTitle) => {
     try {
+
+      const headers = {
+        'Authorization': `Bearer ${process.env.REACT_APP_TMDB_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      };
+
       console.log('Fetching trailer for movie:', movieTitle);
       const searchResponse = await axios.get(
-          `https://api.themoviedb.org/3/search/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(movieTitle)}`
+          `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(movieTitle)}`,
+          { headers }
       );
 
       if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
@@ -99,9 +106,9 @@ function App() {
       }
 
       const movieId = searchResponse.data.results[0].id;
-
       const videoResponse = await axios.get(
-          `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${process.env.REACT_APP_TMDB_API_KEY}`
+          `https://api.themoviedb.org/3/movie/${movieId}/videos`,
+          { headers }
       );
 
       const trailer = videoResponse.data.results.find(
