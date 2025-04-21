@@ -88,7 +88,7 @@ function App() {
   };
 
   const getMovieRecommendations = async (answers) => {
-    const movies = []; // This is the outer movies array
+    let movies = [];
     try {
       const prompt = generatePrompt(answers);
       await ai.models.generateContent({
@@ -137,8 +137,9 @@ function App() {
             <div className="content">
               {!started && (
                   <div className="center-container">
+                    <h1 className="title">Movie Night Quiz</h1>
                     <button className="start-button" onClick={handleStart}>
-                      START QUIZ
+                      START
                     </button>
                   </div>
               )}

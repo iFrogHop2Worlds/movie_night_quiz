@@ -16,7 +16,7 @@
   background: rgba(0, 0, 0, 0.7);
   padding: 2rem;
   border-radius: 10px;
-  box-shadow: 0 0 20px rgba(255, 255, 0, 0.3);
+  box-shadow: 0 0 20px rgba(255, 236, 0, 0.82);
 }
 
 .start-button {
@@ -29,7 +29,7 @@
   cursor: pointer;
   font-weight: bold;
   text-transform: uppercase;
-  box-shadow: 0 0 15px rgba(255, 183, 0, 0.5);
+  box-shadow: 0 0 15px rgb(255, 236, 0);
 }
 
 .question-container {
@@ -96,8 +96,25 @@ h2 {
 
 .center-container {
   display: flex;
-  justify-content: center;
-  margin: 20px 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  margin: 12vh; /* This pushes the title down 15% of the viewport height */
+  font-family: "Notable", sans-serif;
+  font-style: normal;
+  font-size: 3.5rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #333; /* Adjust color as needed */
+  /* Space between title and button */
+}
+
+@media (max-width: 768px) {
+  .title {
+    margin: 4vh;
+  }
 }
 
 .centered-text {
@@ -127,7 +144,7 @@ h2 {
 .loading-container {
   display: flex;
   text-align: center;
-  justify-content: center;
+  justify-self: center;
   align-items: center;
   gap: 12px;
   position: relative;
