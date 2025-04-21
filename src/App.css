@@ -6,6 +6,7 @@
   padding: 20px;
   font-family: 'Arial', sans-serif;
   display: flex;
+  justify-content: center;
   align-items: center;
 }
 
@@ -178,4 +179,20 @@ h2 {
 .next-button {
   position: relative;
   overflow: visible;
+}
+
+.movie-item {
+  flex-direction: row;
+}
+
+@media (max-width: 768px) {
+  .movie-item {
+    flex-direction: column;
+  }
+
+  .movie-trailer iframe {
+    width: 100%;
+    max-width: 300px;
+    margin-top: 15px;
+  }
 }

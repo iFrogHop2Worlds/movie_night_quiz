@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import './App.css';
 import { GoogleGenAI } from "@google/genai";
 
@@ -83,8 +84,39 @@ function App() {
   - Mood: ${answers[3]?.join(', ')}
   - Watching with: ${answers[4]?.join(', ')}`;
 
-    //console.log(prompt);
     return prompt;
+  };
+
+  const getMovieTrailer = async (movieTitle) => {
+    try {
+      console.log('Fetching trailer for movie:', movieTitle);
+      const searchResponse = await axios.get(
+          `https://api.themoviedb.org/3/search/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(movieTitle)}`
+      );
+
+      if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
+        throw new Error('No movie found');
+      }
+
+      const movieId = searchResponse.data.results[0].id;
+
+      const videoResponse = await axios.get(
+          `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${process.env.REACT_APP_TMDB_API_KEY}`
+      );
+
+      const trailer = videoResponse.data.results.find(
+          video => video.type === 'Trailer' && video.site === 'YouTube'
+      );
+
+      if (!trailer) {
+        throw new Error('No trailer found');
+      }
+
+      return `https://www.youtube.com/embed/${trailer.key}`;
+    } catch (error) {
+      console.error('Error fetching trailer:', error);
+      return null;
+    }
   };
 
   const getMovieRecommendations = async (answers) => {
@@ -98,19 +130,17 @@ function App() {
         console.log(text.candidates[0].content.parts[0].text);
         let _text = text.candidates[0].content.parts[0].text;
         const lines = _text.split('\n');
-        // Remove this line: let movies = []; <- This was creating a new local variable
-        console.log(lines)
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
           if (/^\d\.\s+/.test(line)) {
             const titleMatch = line.match(/\*\*(.*?)\*\*/);
             if (titleMatch) {
-              const title = titleMatch[1];
+              const title = titleMatch[1].replace(/['"_]/g, '');
               console.log(title);
-              const description = line.split(':')[1]?.trim() ||
-                  line.substring(line.indexOf('**') + titleMatch[0].length).trim();
+              const description = line.split(':')[1]?.replace(/^\*\*/, '').trim() ||
+                  line.substring(line.indexOf('**') + titleMatch[0].length).replace(/^\*\*/, '').trim();
               console.log(description);
-              movies.push({ // Now this pushes to the outer array
+              movies.push({
                 title,
                 description
               });
@@ -118,7 +148,15 @@ function App() {
           }
         }
       });
-      console.log(movies);
+      for (let movie of movies) {
+        let movie_title = movie.title
+            .replace(/\s*\(\d{4}\):?$/, '')
+            .trim();
+        console.log(movie_title);
+        const trailerUrl = await getMovieTrailer(movie_title);
+        movie.trailerUrl = trailerUrl;
+      }
+
       return movies;
     } catch (error) {
       console.error('Error getting movie recommendations:', error);
@@ -203,9 +241,30 @@ function App() {
                     <p className="centered-text">{recommendations}</p>
                     <div className="movie-list">
                       {movies.map((movie, index) => (
-                          <div key={index}>
-                            {movie.title && <h3 style={{textAlign: 'left'}}>{movie.title}</h3>}
-                            {movie.description && <p style={{textAlign: 'left'}}>{movie.description}</p>}
+                          <div key={index} className="movie-item" style={{
+                            display: 'flex',
+                            margin: '20px 0',
+                            padding: '20px',
+                            borderBottom: '1px solid #eee'
+                          }}>
+                            <div className="movie-info" style={{flex: 1}}>
+                              {movie.title && <h3 style={{textAlign: 'left'}}>{movie.title}</h3>}
+                              {movie.description && <p style={{textAlign: 'left'}}>{movie.description}</p>}
+                            </div>
+                            <div className="movie-trailer" style={{flex: 1}}>
+                              {movie.trailerUrl ? (
+                                  <iframe
+                                      src={movie.trailerUrl}
+                                      width="300"
+                                      height="300"
+                                      allowFullScreen
+                                      frameBorder="0"
+                                      title={`${movie.title} trailer`}
+                                  />
+                              ) : (
+                                  <p>Trailer not available</p>
+                              )}
+                            </div>
                           </div>
                       ))}
                     </div>
