@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import axios from 'axios';
 import './App.css';
-import { GoogleGenAI } from "@google/genai";
+import { FaCog } from 'react-icons/fa'
+import {GoogleGenAI} from "@google/genai";
 
 function App() {
   const [started, setStarted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
-  const [recommendations, setRecommendations] = useState('');
   const [movies, setMovies] = useState([])
   const [isLoading, setIsLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [numberOfRecommendations, setNumberOfRecommendations] = useState(5);
 
   const ai = new GoogleGenAI({apiKey: process.env.REACT_APP_GEMINI_API_TOKEN });
 
@@ -18,12 +20,12 @@ function App() {
     {
       id: 1,
       question: "What years are you interested in?",
-      options: ["1980s", "1990s", "2000s", "2010s", "2020s", "All years"]
+      options: ["1940s","1950s", "1960s", "1970s","1980s", "1990s", "2000s", "2010s", "2020s", "All years"]
     },
     {
       id: 2,
       question: "What genres do you prefer?",
-      options: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Romance"]
+      options: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Romance", "Indie", "Animation", "True Story", "Documentary", "Other"]
     },
     {
       id: 3,
@@ -77,16 +79,24 @@ function App() {
   };
 
   const generatePrompt = () => {
-    const prompt = `Based on the following preferences, please recommend 5 movies and label them in a list 1-5:
+    return `Based on the following preferences, please recommend ${numberOfRecommendations} movies we want each consideration to contain as many if our preferences as possible and label them in a list 1-${numberOfRecommendations}:
   - Time period: ${answers[0]?.join(', ')}
   - Genre: ${answers[1]?.join(', ')}
   - Length: ${answers[2]?.join(', ')}
   - Mood: ${answers[3]?.join(', ')}
-  - Watching with: ${answers[4]?.join(', ')}`;
+  - Watching with: ${answers[4]?.join(', ')}
+  and we expect that our output list will be in the following format using this example list but make sure only return a list the size we asked for above:
+1.  **Title here (movie year here):** description here
 
-    return prompt;
+2.  **Title here (movie year here):** description here
+
+3.  **Title here (movie year here):** description here
+
+4.  **Title here (movie year here):** description here
+
+5.  **Title here (movie year here):** description here`;
   };
-  console.log('tmdb:', process.env.REACT_APP_TMDB_API_TOKEN);
+
   const getMovieTrailer = async (movieTitle) => {
     try {
 
@@ -95,7 +105,6 @@ function App() {
         'Content-Type': 'application/json',
       };
 
-      console.log('Fetching trailer for movie:', movieTitle);
       const searchResponse = await axios.get(
           `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(movieTitle)}`,
           { headers }
@@ -143,10 +152,9 @@ function App() {
             const titleMatch = line.match(/\*\*(.*?)\*\*/);
             if (titleMatch) {
               const title = titleMatch[1].replace(/['"_]/g, '');
-              console.log(title);
               const description = line.split(':')[1]?.replace(/^\*\*/, '').trim() ||
                   line.substring(line.indexOf('**') + titleMatch[0].length).replace(/^\*\*/, '').trim();
-              console.log(description);
+
               movies.push({
                 title,
                 description
@@ -155,6 +163,7 @@ function App() {
           }
         }
       });
+
       for (let movie of movies) {
         let movie_title = movie.title
             .replace(/\s*\(\d{4}\):?$/, '')
@@ -179,107 +188,137 @@ function App() {
               <span>Getting recommendations...</span>
             </div>
         ) : (
-            <div className="content">
-              {!started && (
-                  <div className="center-container">
-                    <h1 className="title">Movie Night Quiz</h1>
-                    <button className="start-button" onClick={handleStart}>
-                      START
-                    </button>
-                  </div>
-              )}
-
-              {started && !showResults && (
-                  <div className="question-container">
-                    <h2 className="centered-text">{questions[currentQuestion].question}</h2>
-                    <div className="options-grid">
-                      {questions[currentQuestion].options.map((option, index) => (
-                          <button
-                              key={index}
-                              className={`option-button ${
-                                  answers[currentQuestion]?.includes(option) ? 'selected' : ''
-                              }`}
-                              onClick={() => handleAnswer(option)}
-                          >
-                            {option}
-                          </button>
-                      ))}
+            <div>
+              <FaCog
+                  onClick={() => setShowSettings(!showSettings)}
+                  style={{
+                    cursor: 'pointer',
+                    fontSize: '24px',
+                    position: 'absolute',
+                    padding: '10px',
+                    top: '10px',
+                    right: '10px',
+                  }}
+              />
+              <div className="settings-container" style={{margin: '20px 0', textAlign: 'center'}}>
+                {showSettings && (
+                    <div className="slider-container">
+                      <label htmlFor="recommendations-slider" style={{display: 'block', marginBottom: '10px'}}>
+                        Number of Recommendations: {numberOfRecommendations}
+                      </label>
+                      <input
+                          id="recommendations-slider"
+                          type="range"
+                          min="1"
+                          max="9"
+                          value={numberOfRecommendations}
+                          onChange={(e) => setNumberOfRecommendations(Number(e.target.value))}
+                          style={{width: '50%'}}
+                      />
                     </div>
+                )}
+              </div>
+              <div className="content">
+                {!started && (
                     <div className="center-container">
-                      <button
-                          className="next-button"
-                          onClick={handleNext}
-                          disabled={!answers[currentQuestion]?.length}
-                      >
-                        {currentQuestion === questions.length - 1 ? (
-                            <button
-                                className="next-button"
-                                onClick={async () => {
-                                  handleNext();
-                                  setIsLoading(true);
-                                  try {
-                                    const movies = await getMovieRecommendations(answers);
-                                    setMovies(movies);
-                                  } finally {
-                                    setIsLoading(false);
-                                  }
-                                }}
-                                disabled={!answers[currentQuestion]?.length || isLoading}
-                            >
-                              Finish
-                            </button>
-                        ) : (
-                            <button
-                                className="next-button"
-                                onClick={handleNext}
-                                disabled={!answers[currentQuestion]?.length}
-                            >
-                              Next
-                            </button>
-                        )}
+                      <h1 className="title">Movie Night Quiz</h1>
+                      <button className="start-button" onClick={handleStart}>
+                        START
                       </button>
                     </div>
-                  </div>
-              )}
+                )}
 
-              {showResults && (
-                  <div className="results">
-                    <h2 className="centered-text">Movie Results:</h2>
-                    <p className="centered-text">{recommendations}</p>
-                    <div className="movie-list">
-                      {movies.map((movie, index) => (
-                          <div key={index} className="movie-item" style={{
-                            display: 'flex',
-                            margin: '20px 0',
-                            padding: '20px',
-                            borderBottom: '1px solid #eee'
-                          }}>
-                            <div className="movie-info" style={{flex: 1}}>
-                              {movie.title && <h3 style={{textAlign: 'left'}}>{movie.title}</h3>}
-                              {movie.description && <p style={{textAlign: 'left'}}>{movie.description}</p>}
-                            </div>
-                            <div className="movie-trailer" style={{flex: 1}}>
-                              {movie.trailerUrl ? (
-                                  <iframe
-                                      src={movie.trailerUrl}
-                                      width="300"
-                                      height="300"
-                                      allowFullScreen
-                                      frameBorder="0"
-                                      title={`${movie.title} trailer`}
-                                  />
-                              ) : (
-                                  <p>Trailer not available</p>
-                              )}
-                            </div>
-                          </div>
-                      ))}
+                {started && !showResults && (
+                    <div className="question-container">
+                      <h2 className="centered-text">{questions[currentQuestion].question}</h2>
+                      <div className="options-grid">
+                        {questions[currentQuestion].options.map((option, index) => (
+                            <button
+                                key={index}
+                                className={`option-button ${
+                                    answers[currentQuestion]?.includes(option) ? 'selected' : ''
+                                }`}
+                                onClick={() => handleAnswer(option)}
+                            >
+                              {option}
+                            </button>
+                        ))}
+                      </div>
+                      <div className="center-container">
+                        <button
+                            className="next-button"
+                            onClick={handleNext}
+                            disabled={!answers[currentQuestion]?.length}
+                        >
+                          {currentQuestion === questions.length - 1 ? (
+                              <button
+                                  className="next-button"
+                                  onClick={async () => {
+                                    handleNext();
+                                    setIsLoading(true);
+                                    try {
+                                      const movies = await getMovieRecommendations(answers);
+                                      setMovies(movies);
+                                    } finally {
+                                      setIsLoading(false);
+                                    }
+                                  }}
+                                  disabled={!answers[currentQuestion]?.length || isLoading}
+                              >
+                                Finish
+                              </button>
+                          ) : (
+                              <button
+                                  className="next-button"
+                                  onClick={handleNext}
+                                  disabled={!answers[currentQuestion]?.length}
+                              >
+                                Next
+                              </button>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <button className="start-button" onClick={handleStartOver}>
-                      START OVER
-                    </button>
-                  </div>
-              )}
+                )}
+
+                {showResults && (
+                    <div className="results">
+                      <h2 className="centered-text">Movie Results:</h2>
+                      <div className="movie-list">
+                        {movies.map((movie, index) => (
+                            <div key={index} className="movie-item" style={{
+                              display: 'flex',
+                              margin: '20px 0',
+                              padding: '20px',
+                              borderBottom: '1px solid #eee'
+                            }}>
+                              <div className="movie-info" style={{flex: 1}}>
+                                {movie.title && <h3 style={{textAlign: 'left'}}>{movie.title}</h3>}
+                                {movie.description && <p style={{textAlign: 'left'}}>{movie.description}</p>}
+                              </div>
+                              <div className="movie-trailer" style={{flex: 1}}>
+                                {movie.trailerUrl ? (
+                                    <iframe
+                                        src={movie.trailerUrl}
+                                        width="300"
+                                        height="300"
+                                        allowFullScreen
+                                        frameBorder="0"
+                                        title={`${movie.title} trailer`}
+                                    />
+                                ) : (
+                                    <p>Trailer not available</p>
+                                )}
+                              </div>
+                            </div>
+                        ))}
+                      </div>
+                      <button className="start-button" onClick={handleStartOver}>
+                        START OVER
+                      </button>
+                    </div>
+                )}
+              </div>
             </div>
         )}
 
